@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Network Protocol", "Network Protocol\Network Protocol.csproj", "{446A3764-FA30-4DA5-9CB0-D3EB364A590E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetworkProtocolConsoleApplication", "NetworkProtocolConsoleApplication\NetworkProtocolConsoleApplication.csproj", "{08F677AA-9D1F-4FC3-8645-A2438456DE2D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +15,10 @@ Global
 		{446A3764-FA30-4DA5-9CB0-D3EB364A590E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{446A3764-FA30-4DA5-9CB0-D3EB364A590E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{446A3764-FA30-4DA5-9CB0-D3EB364A590E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{08F677AA-9D1F-4FC3-8645-A2438456DE2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{08F677AA-9D1F-4FC3-8645-A2438456DE2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{08F677AA-9D1F-4FC3-8645-A2438456DE2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{08F677AA-9D1F-4FC3-8645-A2438456DE2D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

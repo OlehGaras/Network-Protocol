@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 
 namespace Network_Protocol
 {
-    public class Class1
+    public class RequestHandler
     {
+        public Response ProcessRequest(Request request)
+        {
+            return default(Response);
+        }
     }
 }
