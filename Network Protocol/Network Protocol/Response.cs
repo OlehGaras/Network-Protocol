@@ -9,4 +9,9 @@ namespace Network_Protocol
     public class Response
     {
     }
+
+    public class SomeResponse : Response
+    {
+        public string Content = "SomeResponse";
+    }
 }

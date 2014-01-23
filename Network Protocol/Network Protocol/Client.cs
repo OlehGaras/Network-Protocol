@@ -1,16 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Network_Protocol
 {
     public class Client
     {
+        private const string LineForHandshake = "ProtocolVersion:0.0.0.1";
+        private const string ServerAnswer = "Accepted";
+        private readonly CommandSender m_Sender = new CommandSender();
+
         public TcpClient ConnectToServer(IPAddress ip, int port)
         {
             var client = new TcpClient();
@@ -21,28 +21,17 @@ namespace Network_Protocol
                 AutoFlush = true
             };
             var streamReader = new StreamReader(stream);
-            var lineForHandshake = "ProtocolVersion:0.0.0.1";
-            streamWriter.WriteLine(lineForHandshake);
-            var answer = streamReader.ReadLine();
-            if (answer.Contains("Accepted"))
-                return client;
-            return null;
-        }
 
-        public string PingServer(IPAddress ip, int port)
-        {
-            var client = new TcpClient();
-            client.Connect(ip, port);
-            var stream = client.GetStream();
-            var streamWriter = new StreamWriter(stream)
-            {
-                AutoFlush = true
-            };
-            var streamReader = new StreamReader(stream);
-            var lineForHandshake = "ProtocolVersion:0.0.0.1";
-            streamWriter.WriteLine(lineForHandshake);
+            streamWriter.WriteLine(LineForHandshake);
             var answer = streamReader.ReadLine();
-            return answer;
+
+            if (answer.Contains(ServerAnswer))
+            {
+                m_Sender.AddCommand(new SomeCommand(), () => { Console.WriteLine("SomeCommand Done!!!"); });
+                m_Sender.Send(streamWriter,streamReader);
+                return client;
+            }
+            return null;
         }
     }
 }

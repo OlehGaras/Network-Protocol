@@ -46,16 +46,31 @@ namespace Network_Protocol
         }
 
         [DataMember]
-        public int Id { get; private set; }
-
-        public delegate void CallBack();
+        public int Id { get; set; }
     }
 
     public class CloseCommand : Command
     {
+        public CloseCommand()
+        {
+            Id = "CloseCommand".GetHashCode();
+        }
+
         protected override Type RequestType
         {
             get { return typeof (CloseRequest); }
         }
+    }
+
+    public class SomeCommand : Command
+    {
+        public SomeCommand()
+        {
+            Id = "SomeCommand".GetHashCode();
+        }
+    }
+
+    public class HelloWorldCommand : Command
+    {
     }
 }

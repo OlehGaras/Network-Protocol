@@ -1,7 +1,5 @@
-﻿using System;
-using System.IO;
+﻿using System.Threading;
 using Network_Protocol;
-using System.Runtime.Serialization;
 
 namespace NetworkProtocolConsoleApplication
 {
@@ -9,22 +7,17 @@ namespace NetworkProtocolConsoleApplication
     {
         static void Main(string[] args)
         {
-            //var server = new Server(7777);
-            Test t = new Test();
-            t.Name = "Text";
-            t.Age = 100500;
+            var cts = new CancellationTokenSource();
 
-            MemoryStream stream = new MemoryStream();
-            DataContractSerializer ser = new DataContractSerializer(typeof(Test));
-            ser.WriteObject(stream,t);
-            stream.Position = 0;
-            StreamReader sr = new StreamReader(stream);
 
-            Console.WriteLine(sr.ReadToEnd());
+            var server = new Server(1111);
+            var client = server.WaitAndAcceptClient(cts.Token);
 
-            stream.Position = 0;
-
-            Test t2 = (Test)ser.ReadObject(stream);
+            var thread1 = new Thread(() =>
+                {
+                    server.HandleCommands(client.GetStream());
+                });
+            thread1.Start();        
         }
     }
 }
