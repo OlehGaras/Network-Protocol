@@ -11,17 +11,18 @@ namespace Network_Protocol
         public int Port { get; private set; }
         private StreamReader m_Reader;
         private StreamWriter m_Writer;
-        
+        private bool m_Connected;
+        private TcpClient m_Client;
+
 
         public Server(int port)
         {
-            Port = port;           
+            Port = port;
         }
 
         public TcpClient WaitAndAcceptClient(CancellationToken token)
         {
             var tcpListener = new TcpListener(IPAddress.Any, Port);
-            TcpClient client = null;
             while (!token.IsCancellationRequested)
             {
                 tcpListener.Start();
@@ -30,20 +31,30 @@ namespace Network_Protocol
                 }
                 else
                 {
-                    client = tcpListener.AcceptTcpClient();
-                    var stream = client.GetStream();
-                    if (HandShake(stream))
-                    {
-                        //Console.WriteLine("Connected");
+                    tcpListener.BeginAcceptTcpClient(ClientConnected, tcpListener);
+                    if (m_Connected)
                         break;
-                    }
-                    client.Close();
-                    stream.Dispose();
-                    client = null;
                 }
             }
             tcpListener.Stop();
-            return client;
+            return m_Client;
+        }
+
+        private void ClientConnected(IAsyncResult ar)
+        {
+            //var thread = new Thread(()=>new Server(Port + 1).WaitAndAcceptClient(new CancellationToken()));
+            //thread.Start();
+            var tcpListener = (TcpListener)ar.AsyncState;
+            var client = tcpListener.EndAcceptTcpClient(ar);
+            var stream = client.GetStream();
+            if (HandShake(stream))
+            {
+                m_Client = client;
+                m_Connected = true;
+                return;
+            }
+            client.Close();
+            stream.Dispose();
         }
 
         public bool HandShake(Stream stream)
