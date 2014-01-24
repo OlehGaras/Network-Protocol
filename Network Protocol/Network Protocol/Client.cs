@@ -7,10 +7,7 @@ namespace Network_Protocol
 {
     public class Client
     {
-        private const string LineForHandshake = "ProtocolVersion:0.0.0.1";
-        private const string ServerAnswer = "Accepted";
         private readonly CommandSender m_Sender = new CommandSender();
-
         public TcpClient ConnectToServer(IPAddress ip, int port)
         {
             var client = new TcpClient();
@@ -22,13 +19,11 @@ namespace Network_Protocol
             };
             var streamReader = new StreamReader(stream);
 
-            streamWriter.WriteLine(LineForHandshake);
+            streamWriter.WriteLine(Constants.LineForHandshake);
             var answer = streamReader.ReadLine();
 
-            if (answer.Contains(ServerAnswer))
+            if (answer != null && answer.Contains(Constants.ServerAnswer))
             {
-                m_Sender.AddCommand(new SomeCommand(), () => { Console.WriteLine("SomeCommand Done!!!"); });
-                m_Sender.Send(streamWriter,streamReader);
                 return client;
             }
             return null;

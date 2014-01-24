@@ -12,14 +12,18 @@ namespace Network_Protocol
         protected CommandFactory()
         {
             m_CommandsToIDDictionary = new Dictionary<int,Type>();
+            m_IDToCommandsDictionary = new Dictionary<Type, int>(); 
             AddCommand(typeof(CloseCommand));
         }
 
         protected void AddCommand(Type commandType)
         {
-            m_CommandsToIDDictionary.Add(m_Counter, commandType);
-            m_IDToCommandsDictionary.Add(commandType, m_Counter);
-            m_Counter++;
+            if (!m_IDToCommandsDictionary.ContainsKey(commandType))
+            {
+                m_CommandsToIDDictionary.Add(m_Counter, commandType);
+                m_IDToCommandsDictionary.Add(commandType, m_Counter);
+                m_Counter++;
+            }
         }
 
         public Command GetCommandByID(int id)
@@ -33,7 +37,7 @@ namespace Network_Protocol
 
         public int GetCommandID(Command command)
         {
-            Type commandType = command.GetType();
+            var commandType = command.GetType();
             if (m_IDToCommandsDictionary.ContainsKey(commandType))
             {
                 return m_IDToCommandsDictionary[commandType];
@@ -47,24 +51,13 @@ namespace Network_Protocol
     {
         public DisplayCommandFactory()
         {
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
-            AddCommand(typeof(Type));
+            AddCommand(typeof(CloseCommand));
+            AddCommand(typeof(SomeCommand));
+        }
+
+        public void AddCommand(Type commandType)
+        {
+            base.AddCommand(commandType);
         }
     }
 }

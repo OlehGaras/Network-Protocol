@@ -13,11 +13,17 @@ namespace ConsoleApplication1
     {
         static void Main(string[] args)
         {
-            var client = new Client();
-            var thread2 = new Thread(() =>
+            var client = new Client().ConnectToServer(IPAddress.Parse("127.0.0.1"), 1111);
+            CommandSender sender = null;
+            if (client != null)
             {
-                client.ConnectToServer(IPAddress.Parse("127.0.0.1"), 1111);
-            });
+                sender = new CommandSender(client.GetStream());
+            }
+            var thread2 = new Thread(() =>
+                {
+                    if (sender != null)
+                        sender.Execute();
+                });
             thread2.Start();
         }
     }

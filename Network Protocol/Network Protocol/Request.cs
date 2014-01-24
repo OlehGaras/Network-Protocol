@@ -8,6 +8,11 @@ namespace Network_Protocol
 
     public class CloseRequest: Request
     {
-        public int ConnectionName { get { return new Random().Next(); } }
+        public string ConnectionName { get { return "Test Connection"; } }
+    }
+
+    public class SomeRequest : Request
+    {
+        public int RandomNumber { get { return new Random().Next(); } }
     }
 }

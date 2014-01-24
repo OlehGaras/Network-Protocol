@@ -8,11 +8,10 @@ namespace Network_Protocol
 {
     public class Server
     {
-        private readonly CommandHandler m_Handler = new CommandHandler();
         public int Port { get; private set; }
         private StreamReader m_Reader;
         private StreamWriter m_Writer;
-        private readonly CommandFactory m_Factory = new CommandFactory();
+        
 
         public Server(int port)
         {
@@ -35,7 +34,7 @@ namespace Network_Protocol
                     var stream = client.GetStream();
                     if (HandShake(stream))
                     {
-                        Console.WriteLine("Connected");
+                        //Console.WriteLine("Connected");
                         break;
                     }
                     client.Close();
@@ -55,42 +54,14 @@ namespace Network_Protocol
                 AutoFlush = true
             };
 
-            string version = string.Empty;
             var line = m_Reader.ReadLine();
 
-            if (line.StartsWith("ProtocolVersion:"))
+            if (line != null && String.CompareOrdinal(line, Constants.LineForHandshake) == 0)
             {
-                version = line.Split(':')[1].Trim();
-            }
-
-            if (version == "0.0.0.1")
-            {
-                m_Writer.WriteLine(line + "Accepted");
+                m_Writer.WriteLine(Constants.ServerAnswer);
                 return true;
             }
             return false;
         }
-
-        public void HandleCommands(Stream stream)
-        {
-            while (true)
-            {
-                string commandLine = m_Reader.ReadLine();
-                var command = m_Factory.Recognize((new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<Command>(commandLine)).Id);
-                var response = ProcessCommand(command.GetType());
-                string json = new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(response);
-                m_Writer.WriteLine(json);
-            }
-        }
-
-        public Response ProcessCommand(Type typeOfCommand)
-        {
-            if (m_Handler.ContainsCommandHandler(typeOfCommand))
-            {
-                return m_Handler[typeOfCommand].Invoke();
-            }
-            return null;
-        }
-
     }
 }

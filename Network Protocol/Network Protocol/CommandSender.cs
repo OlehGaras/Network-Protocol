@@ -1,60 +1,72 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Web.Script.Serialization;
 
 namespace Network_Protocol
 {
-    public delegate void CallBack();
     public class CommandSender
     {
-        public Stream Stream;
-        public Queue<Command, CallBack> CommandsQueue { get; set; }
+        private Stream m_Stream;
+        public Queue<Command> CommandsQueue { get; set; }
+        private DisplayCommandFactory m_CommandFactory;
+        private StreamReader m_Reader;
+        private StreamWriter m_Writer;
 
         public CommandSender()
         {
-            CommandsQueue = new Queue<Command, CallBack>();
+            m_CommandFactory = new DisplayCommandFactory();
+            CommandsQueue = new Queue<Command>();
+            CommandsQueue.Enqueue(new SomeCommand());
+
+            CommandsQueue.Enqueue(new CloseCommand());
         }
 
         public CommandSender(Stream stream)
             : this()
         {
-            Stream = stream;
+            m_Stream = stream;
+            m_Reader = new StreamReader(stream);
+            m_Writer = new StreamWriter(stream)
+                {
+                    AutoFlush = true
+                };
         }
 
-        public void AddCommand(Command c, CallBack method)
+        public void AddCommand(Command c)
         {
-            CommandsQueue.Add(c, method);
+            m_CommandFactory.AddCommand(c.GetType());
+            CommandsQueue.Enqueue(c);
         }
 
-        private DisplayCommandFactory CommandFactory;
+        public void Execute()
+        {
+            while (CommandsQueue.Count != 0)
+            {
+                ExecuteCommand(CommandsQueue.Peek());
+                CommandsQueue.Dequeue();
+            }
+            m_Stream.Close();
+            m_Reader.Close();
+            m_Writer.Close();
+        }
 
         public void ExecuteCommand(Command command)
         {
-            var streamWriter = new StreamWriter((Stream) null);
-            var id = CommandFactory.GetCommandID(command);
-            streamWriter.Write(id);
-            streamWriter.Write(Request);
-        }
-
-        public string Send(StreamWriter streamWriter, StreamReader streamReader)
-        {
-            var commands = new Command[CommandsQueue.Count];
-            var callbacks = new CallBack[CommandsQueue.Count];
-            CommandsQueue.Keys.CopyTo(commands, 0);
-            CommandsQueue.Values.CopyTo(callbacks, 0);
-
-            string json = new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(commands[commands.Length - 1]);
-            streamWriter.WriteLine(json);
-
-            var jsonResponse = streamReader.ReadLine();
-            var typeOfResponse = commands[commands.Length - 1].Response.GetType();
-            var response = new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize <typeOfResponse> (jsonResponse);
-            if (response != null)
+            var id = m_CommandFactory.GetCommandID(command);
+            var jsonId = new JavaScriptSerializer().Serialize(id);
+            m_Writer.WriteLine(jsonId);
+            if(String.CompareOrdinal(m_Reader.ReadLine(), Constants.Request) == 0)
             {
-                callbacks[callbacks.Length-1].Invoke();
+                var jsonRequest = new JavaScriptSerializer().Serialize(command.Request);
+                m_Writer.WriteLine(jsonRequest);
             }
-
-            return json;
+            var jsonResponse = m_Reader.ReadLine();
+            if (jsonResponse != null)
+            {
+                var response = new JavaScriptSerializer().Deserialize(jsonResponse,command.Response.GetType());
+                command.CallBackMethod.Invoke((Response)response);
+            }
         }
-
     }
 }

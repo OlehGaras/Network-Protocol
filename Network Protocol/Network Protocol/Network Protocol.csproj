@@ -45,6 +45,8 @@
     <Compile Include="Command.cs" />
     <Compile Include="CommandFactory.cs" />
     <Compile Include="CommandSender.cs" />
+    <Compile Include="Constants.cs" />
+    <Compile Include="EndPoint.cs" />
     <Compile Include="Request.cs" />
     <Compile Include="CommandHandler.cs" />
     <Compile Include="Response.cs" />

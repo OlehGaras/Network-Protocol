@@ -21,15 +21,11 @@ namespace Network_Protocol
         {
             Handlers.Add(command.GetType(), handler);
         }
-        private DisplayCommandFactory CommandFactory;
+        private DisplayCommandFactory m_CommandFactory;
 
         public bool ContainsCommandHandler(Type typeOfCommand)
         {
             return Handlers.ContainsKey(typeOfCommand);
-            var commmand = CommandFactory.GetCommandByID(id);
-            commmand.SetRequest(commmand);
-            CommandHandler(commmand);
-            stre
         }
 
         public Handler this [Type typeOfCommand]
@@ -43,8 +39,7 @@ namespace Network_Protocol
         }
 
         public Response OpenCommandHandler()
-        {
-            
+        {           
             return null;
         }
 

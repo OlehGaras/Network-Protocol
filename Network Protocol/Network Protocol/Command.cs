@@ -3,6 +3,7 @@ using System.Runtime.Serialization;
 
 namespace Network_Protocol
 {
+    public delegate void CallBack(Response response);
     [DataContract]
     public  class Command
     {
@@ -47,6 +48,13 @@ namespace Network_Protocol
 
         [DataMember]
         public int Id { get; set; }
+
+        public void SetRequest(Request request)
+        {
+            Request = request;
+        }
+
+        public CallBack CallBackMethod { get; set; }
     }
 
     public class CloseCommand : Command
@@ -54,8 +62,11 @@ namespace Network_Protocol
         public CloseCommand()
         {
             Id = "CloseCommand".GetHashCode();
+            CallBackMethod = new CallBack((response) =>
+                {
+                    
+                });
         }
-
         protected override Type RequestType
         {
             get { return typeof (CloseRequest); }
@@ -67,6 +78,18 @@ namespace Network_Protocol
         public SomeCommand()
         {
             Id = "SomeCommand".GetHashCode();
+            CallBackMethod = new CallBack((response) =>
+            {
+
+            });
+           
+        }
+        protected override Type RequestType
+        {
+            get
+            {
+                return typeof(SomeRequest);
+            }
         }
     }
 
