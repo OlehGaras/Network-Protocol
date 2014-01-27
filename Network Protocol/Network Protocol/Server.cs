@@ -42,8 +42,6 @@ namespace Network_Protocol
 
         private void ClientConnected(IAsyncResult ar)
         {
-            //var thread = new Thread(()=>new Server(Port + 1).WaitAndAcceptClient(new CancellationToken()));
-            //thread.Start();
             var tcpListener = (TcpListener)ar.AsyncState;
             var client = tcpListener.EndAcceptTcpClient(ar);
             var stream = client.GetStream();
@@ -55,6 +53,7 @@ namespace Network_Protocol
             }
             client.Close();
             stream.Dispose();
+            
         }
 
         public bool HandShake(Stream stream)

@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Network_Protocol
+﻿namespace Network_Protocol
 {
     public class Response
     {
+        public Result CommandResult { get; set;}
+        public string Message { get; set;}
     }
 
     public class SomeResponse : Response

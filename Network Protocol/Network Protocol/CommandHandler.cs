@@ -13,7 +13,8 @@ namespace Network_Protocol
             Handlers = new Dictionary<Type, Handler>
                 {
                     {typeof (CloseCommand), CloseCommandHandler},
-                    {typeof (SomeCommand), SomeCommandHandler}
+                    {typeof (SomeCommand), SomeCommandHandler},
+                    {typeof(HelloWorldCommand), HelloWorldCommandHandler}
                 };
         }
 
@@ -21,7 +22,7 @@ namespace Network_Protocol
         {
             Handlers.Add(command.GetType(), handler);
         }
-        private DisplayCommandFactory m_CommandFactory;
+        
 
         public bool ContainsCommandHandler(Type typeOfCommand)
         {
@@ -38,6 +39,12 @@ namespace Network_Protocol
             return null;
         }
 
+        public Response HelloWorldCommandHandler(Command command)
+        {
+            Console.WriteLine("Hello World Command Handled");
+            return new Response();
+        }
+
         public Response OpenCommandHandler()
         {           
             return null;
@@ -45,8 +52,7 @@ namespace Network_Protocol
 
         public Response SomeCommandHandler(Command command)
         {
-            var r = new SomeResponse();
-            r.Content = "Server processed the SomeCommand";
+            var r = new SomeResponse {Content = "Server processed the SomeCommand"};
             return r;
         }
     }

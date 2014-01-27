@@ -1,106 +1,111 @@
 ﻿using System;
 using System.IO;
-using System.Text;
+using System.Net.Sockets;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading;
 using System.Web.Script.Serialization;
 
 namespace Network_Protocol
 {
     public class EndPoint
     {
-        private DisplayCommandFactory m_Factory = new DisplayCommandFactory();
+        private TestCommandFactory m_Factory;
+        private Thread m_HandleThread;
         private readonly CommandHandler m_Handler = new CommandHandler();
-        private Stream m_Stream;
-        private StreamReader m_Reader;
-        private StreamWriter m_Writer;
-        private bool m_IsEnd;
+        private readonly Stream m_Stream;
+        private readonly TcpClient m_Client;
+        private readonly BinaryFormatter m_BinaryFormatter = new BinaryFormatter();
+        private readonly JavaScriptSerializer m_JavaScriptSerializer = new JavaScriptSerializer();
+        private int m_Started = 0;
+        private int m_Stoped = 0;
+        private CancellationTokenSource m_Cts = new CancellationTokenSource();
 
-        public EndPoint(Stream stream)
+        public EndPoint(TcpClient client, TestCommandFactory commandFactory)
         {
-            m_Stream = stream;
-            m_Reader = new StreamReader(stream);
-            m_Writer = new StreamWriter(stream)
+            m_Client = client;
+            m_Stream = client.GetStream();
+            m_Factory = commandFactory;
+        }
+
+        public void StartHandleCommand()
+        {
+            if (Interlocked.Increment(ref m_Started) == 1)
+            {
+                m_HandleThread = new Thread(HandleCommands);
+                m_HandleThread.Start();
+            }
+        }
+
+        public void StopHandleCommands()
+        {
+            if (Interlocked.Increment(ref m_Stoped) == 1)
+            {
+                if (m_Started == 0)
                 {
-                    AutoFlush = true
-                };
+                    Interlocked.Decrement(ref m_Stoped);
+                    return;
+                }
+                m_Cts.Cancel();
+                m_Client.Close();
+                m_HandleThread.Join();
+                m_Stream.Close();
+            }
         }
 
         public void HandleCommands()
         {
-            try
+            var token = m_Cts.Token;
+            while (true)
             {
-                while (m_Stream.CanRead)
+                if (token.IsCancellationRequested)
                 {
-                    var data = new byte[1000];
-                    m_Stream.BeginRead(data, 0, data.Length, GotCommand, data);
-                    if (m_IsEnd)
-                        break;
+                    break;
                 }
-                //m_Reader.Close();
-                //m_Writer.Close();
-                //m_Stream.Close();
-            }
-            catch (IOException)
-            {
-                //HERE GOES CODE TO HANDLE CLIENT DISCONNECTION
-            }
-            catch (ObjectDisposedException)
-            {
-                //HERE GOES CODE TO HANDLE CLIENT DISCONNECTION
+                HandleCommand();
             }
         }
 
-        private void GotCommand(IAsyncResult ar)
+        private void HandleCommand()
         {
+            Response response = null;
             try
             {
-                var readBytes = m_Stream.EndRead(ar);
-                var data = (byte[]) ar.AsyncState;
-                var jsonCommandIDRequest = Encoding.UTF8.GetString(data, 0, readBytes);
+                var jsonCommandIDRequest = (string)m_BinaryFormatter.Deserialize(m_Stream);
                 var jsonID = string.Empty;
                 var jsonRequest = string.Empty;
 
-                if (jsonCommandIDRequest != "")
+                if (!string.IsNullOrEmpty(jsonCommandIDRequest))
                 {
                     string[] parts = jsonCommandIDRequest.Split(';');
                     jsonID = parts[0];
                     jsonRequest = parts[1];
                 }
 
-                if (jsonID != "" && jsonRequest != "")
+                if (!string.IsNullOrEmpty(jsonID) && !string.IsNullOrEmpty(jsonRequest))
                 {
-                    var id = new JavaScriptSerializer().Deserialize<int>(jsonID);
+                    var id = m_JavaScriptSerializer.Deserialize<int>(jsonID);
                     var command = m_Factory.GetCommandByID(id);
-
-                    if (command.GetType() == typeof (CloseCommand))
-                        m_IsEnd = true;
-
-                    var t = command.Request.GetType();
-                    var request = new JavaScriptSerializer().Deserialize(jsonRequest, t);
-
-                    command.SetRequest((Request) request);
-
-                    var response = ProcessCommand(command);
-                    string json = new JavaScriptSerializer().Serialize(response);
-
-                    byte[] arrResponse = Encoding.UTF8.GetBytes(json);
-                    m_Stream.BeginWrite(arrResponse, 0, arrResponse.Length, WriteDone, null);
+                    var request = m_JavaScriptSerializer.Deserialize(jsonRequest, command.RequestType);
+                    command.Request = (Request)request;
+                    response = ProcessCommand(command);
+                    response.CommandResult = Result.Done;
                 }
             }
-            catch (IOException)
+            catch (Exception e)
             {
+                response = new Response
+                    {
+                        CommandResult = Result.Failed,
+                        Message = e.Message
+                    };
             }
 
-        }
-
-        private void WriteDone(IAsyncResult ar)
-        {
+            string json = m_JavaScriptSerializer.Serialize(response);
             try
             {
-                m_Stream.EndWrite(ar);
-                m_IsEnd = true;
-                m_Stream.Close();
+                m_BinaryFormatter.Serialize(m_Stream, json);
             }
-            catch (IOException)
+            catch (IOException e)
             {
             }
         }

@@ -1,18 +1,22 @@
 ﻿using System;
-using System.Runtime.Serialization;
+using System.Threading;
 
 namespace Network_Protocol
 {
     public delegate void CallBack(Response response);
-    [DataContract]
-    public  class Command
+
+    public class Command
     {
-        protected virtual Type RequestType { get { return typeof (Request); } }
-        protected virtual Type ResponseType { get { return typeof (Response); } }
+        public virtual Type RequestType { get { return typeof(Request); } }
+        public virtual Type ResponseType { get { return typeof(Response); } }
+        protected CallBack CallBackMethod { get; set; }
+
+        protected Command(CallBack callBack = null)
+        {
+            CallBackMethod = callBack;
+        }
 
         private Request m_Request;
-
-        [DataMember]
         public Request Request
         {
             get
@@ -24,67 +28,73 @@ namespace Network_Protocol
                 return m_Request;
             }
 
-            private set
+            set
             {
                 m_Request = value;
             }
         }
 
         private Response m_Response;
-        public Response Response {
+        public Response Response
+        {
             get
             {
                 if (m_Response == null)
                 {
-                    m_Response = (Response) Activator.CreateInstance(ResponseType);
+                    m_Response = (Response)Activator.CreateInstance(ResponseType);
                 }
                 return m_Response;
             }
-            private set
+            set
             {
                 m_Response = value;
             }
         }
 
-        [DataMember]
-        public int Id { get; set; }
-
-        public void SetRequest(Request request)
+        private ManualResetEvent m_WaitHandle;
+        public WaitHandle WaitHandle
         {
-            Request = request;
+            get
+            {
+                if (m_WaitHandle == null)
+                {
+                    m_WaitHandle = new ManualResetEvent(false);
+                }
+                return m_WaitHandle;
+            }
         }
 
-        public CallBack CallBackMethod { get; set; }
+        public void SetCommandCompleted(Response response)
+        {
+            Response = response;
+            if (CallBackMethod != null)
+                CallBackMethod(response);
+            if (m_WaitHandle != null) 
+                m_WaitHandle.Set();
+        }
     }
 
     public class CloseCommand : Command
     {
-        public CloseCommand()
+        public CloseCommand(CallBack callBack):base(callBack)
+        {}
+
+        public override Type RequestType
         {
-            Id = "CloseCommand".GetHashCode();
-            CallBackMethod = new CallBack((response) =>
-                {
-                    
-                });
-        }
-        protected override Type RequestType
-        {
-            get { return typeof (CloseRequest); }
+            get { return typeof(CloseRequest); }
         }
     }
 
     public class SomeCommand : Command
     {
-        public SomeCommand()
+        public SomeCommand():this(null)
         {
-            Id = "SomeCommand".GetHashCode();
-            CallBackMethod = new CallBack((response) =>
-            {
-
-            });
-           
         }
-        protected override Type RequestType
+
+        public SomeCommand(CallBack callBack = null): base(callBack)
+        {}
+
+        public override Type RequestType
         {
             get
             {
@@ -94,6 +104,18 @@ namespace Network_Protocol
     }
 
     public class HelloWorldCommand : Command
+    {
+
+        public HelloWorldCommand():this(null)
+        {
+        }
+
+        public HelloWorldCommand(CallBack callback = null) : base(callback)
+        {
+        }
+    }
+
+    public class AddCommand : Command
     {
     }
 }

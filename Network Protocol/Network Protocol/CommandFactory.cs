@@ -7,7 +7,7 @@ namespace Network_Protocol
     {
         private readonly Dictionary<int, Type> m_CommandsToIDDictionary;
         private readonly Dictionary<Type, int> m_IDToCommandsDictionary;
-        private int m_Counter = 0;
+        private int m_Counter;
 
         protected CommandFactory()
         {
@@ -47,17 +47,13 @@ namespace Network_Protocol
     }
 
 
-    public class DisplayCommandFactory : CommandFactory
+    public class TestCommandFactory : CommandFactory
     {
-        public DisplayCommandFactory()
-        {
-            AddCommand(typeof(CloseCommand));
+        public TestCommandFactory()
+        {            
             AddCommand(typeof(SomeCommand));
-        }
-
-        public void AddCommand(Type commandType)
-        {
-            base.AddCommand(commandType);
+            AddCommand(typeof(CloseCommand));
+            AddCommand(typeof(HelloWorldCommand));
         }
     }
 }

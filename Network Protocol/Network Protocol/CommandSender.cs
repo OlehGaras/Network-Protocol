@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using System.Net.Sockets;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading;
 using System.Web.Script.Serialization;
 
 namespace Network_Protocol
@@ -9,86 +11,115 @@ namespace Network_Protocol
     public class CommandSender
     {
         private readonly Stream m_Stream;
-        public Queue<Command> CommandsQueue { get; set; }
-        private readonly DisplayCommandFactory m_CommandFactory;
-        private readonly StreamReader m_Reader;
-        private readonly StreamWriter m_Writer;
-        private Command m_CurrentCommand;
+        private readonly Queue<Command> m_CommandsQueue;
+        private readonly TestCommandFactory m_CommandFactory;
+        private TcpClient m_Client;
+        private Thread m_HandleThread;
+        private readonly BinaryFormatter m_BinaryFormatter = new BinaryFormatter();
+        private  readonly JavaScriptSerializer m_JavaScriptSerializer = new JavaScriptSerializer();
+        private readonly CancellationTokenSource m_Cts = new CancellationTokenSource();
+        private int m_Started = 0;
+        private int m_Stopped = 0;
 
         public CommandSender()
         {
-            m_CommandFactory = new DisplayCommandFactory();
-            CommandsQueue = new Queue<Command>();
-            CommandsQueue.Enqueue(new SomeCommand());
-
-            CommandsQueue.Enqueue(new CloseCommand());
+            m_CommandFactory = new TestCommandFactory();
+            m_CommandsQueue = new Queue<Command>();
+            m_CommandsQueue.Enqueue(new SomeCommand(respone => Console.WriteLine("SomeCommand done")));
         }
 
-        public CommandSender(Stream stream)
+        public CommandSender(TcpClient client)
             : this()
         {
-            m_Stream = stream;
-            m_Reader = new StreamReader(stream);
-            m_Writer = new StreamWriter(stream)
-                {
-                    AutoFlush = true
-                };
+            m_Client = client;
+            m_Stream = client.GetStream();
         }
 
-        public void AddCommand(Command c)
+        public void AddCommand(Command command)
         {
-            m_CommandFactory.AddCommand(c.GetType());
-            CommandsQueue.Enqueue(c);
+            m_CommandsQueue.Enqueue(command);
         }
 
-        public void Execute()
+        public void StartHandleCommands()
         {
-            while (CommandsQueue.Count != 0)
+            if (Interlocked.Increment(ref m_Started) == 1)
             {
-                ExecuteCommand(CommandsQueue.Peek());
-                CommandsQueue.Dequeue();
+                m_HandleThread = new Thread(Execute);
+                m_HandleThread.Start();                
             }
-            //m_Stream.Close();
-            //m_Reader.Close();
-            //m_Writer.Close();
+            else
+            {
+                throw new Exception("Cannot start this method twice");
+            }
+        }
+
+        public void StopHandleCommands()
+        {
+            if (Interlocked.Increment(ref m_Stopped) == 1)
+            {
+                if (m_Started == 0)
+                {
+                    Interlocked.Decrement(ref m_Stopped);
+                    return;
+                }
+                m_Cts.Cancel();
+                m_HandleThread.Join();
+                if (m_CommandsQueue.Count != 0)
+                {
+                    foreach (var command in m_CommandsQueue)
+                    {
+                        command.SetCommandCompleted(new Response() { CommandResult = Result.Cancelled });
+                    }
+                }
+                var closeCommand = new CloseCommand(response => m_Stream.Close());
+                ExecuteCommand(closeCommand);
+                closeCommand.WaitHandle.WaitOne();
+                m_Client.Close();
+            }
+        }
+
+        private void Execute()
+        {
+            var token = m_Cts.Token;
+            while (true)
+            {
+                if(token.IsCancellationRequested)
+                    break;
+                if (m_CommandsQueue.Count == 0)
+                {
+                    SpinWait.SpinUntil(() => m_CommandsQueue.Count != 0, 200);
+                    continue;
+                }
+                ExecuteCommand(m_CommandsQueue.Dequeue());
+            }
         }
 
         public void ExecuteCommand(Command command)
         {
-            m_CurrentCommand = command;
-            var id = m_CommandFactory.GetCommandID(command);
-            var jsonRequest = new JavaScriptSerializer().Serialize(command.Request);
-            var jsonId = new JavaScriptSerializer().Serialize(id);
-            var jsonToSend = jsonId + ";" + jsonRequest;
-            var data = Encoding.UTF8.GetBytes(jsonToSend);
+            try
+            {
+                var commandID = m_CommandFactory.GetCommandID(command);
 
-            m_Stream.BeginWrite(data, 0, data.Length, WriteDone, null);
-            //m_Writer.WriteLine(jsonToSend);
-            //var jsonResponse = m_Reader.ReadLine();
-            //if (jsonResponse != null)
-            //{
-            //    var response = new JavaScriptSerializer().Deserialize(jsonResponse,command.Response.GetType());
-            //    command.CallBackMethod.Invoke((Response)response);
-            //}
-        }
+                var jsonRequest = m_JavaScriptSerializer.Serialize(command.Request);
+                var jsonId = m_JavaScriptSerializer.Serialize(commandID);
 
-        private void WriteDone(IAsyncResult ar)
-        {
-            m_Stream.EndWrite(ar);
+                var jsonToSend = jsonId + ";" + jsonRequest;
+                m_BinaryFormatter.Serialize(m_Stream,jsonToSend);
 
-            byte[]data = new byte[1000];
-            m_Stream.BeginRead(data, 0, data.Length, GotResponse, data);
-        }
-
-        private void GotResponse(IAsyncResult ar)
-        {
-            int readBytes = m_Stream.EndRead(ar);
-
-            var arrResponse = (byte[]) ar.AsyncState;
-            var jsonResponse = Encoding.UTF8.GetString(arrResponse, 0, readBytes);
-            var response = new JavaScriptSerializer().Deserialize(jsonResponse, m_CurrentCommand.Response.GetType());
-            m_CurrentCommand.CallBackMethod.Invoke((Response)response);
-            m_Stream.Close();
+                var responseString = (string)m_BinaryFormatter.Deserialize(m_Stream);
+                var response = m_JavaScriptSerializer.Deserialize(responseString, command.ResponseType);
+                command.SetCommandCompleted((Response)response);
+            }
+            catch (IOException e)
+            {
+                command.Response.Message = e.Message;
+                command.SetCommandCompleted(null);
+            }
+            catch (SocketException e)
+            {
+                command.Response.Message = e.Message;
+                command.SetCommandCompleted(null);
+            }
         }
     }
 }
