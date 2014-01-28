@@ -1,42 +1,34 @@
 ﻿using System;
-using System.IO;
 using System.Net.Sockets;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
-using System.Web.Script.Serialization;
 
 namespace Network_Protocol
 {
     public class EndPoint
     {
-        private TestCommandFactory m_Factory;
-        private Thread m_HandleThread;
-        private readonly CommandHandler m_Handler = new CommandHandler();
-        private readonly Stream m_Stream;
-        private readonly TcpClient m_Client;
-        private readonly BinaryFormatter m_BinaryFormatter = new BinaryFormatter();
-        private readonly JavaScriptSerializer m_JavaScriptSerializer = new JavaScriptSerializer();
+        private readonly CommandSender m_CommandSender;
+        private readonly CommandHandler m_CommandHandler;
+        private readonly CancellationTokenSource m_Cts;
         private int m_Started = 0;
         private int m_Stoped = 0;
-        private CancellationTokenSource m_Cts = new CancellationTokenSource();
 
-        public EndPoint(TcpClient client, TestCommandFactory commandFactory)
+        public EndPoint(TcpClient inClient, TcpClient outClient, CommandFactory commandFactory)
         {
-            m_Client = client;
-            m_Stream = client.GetStream();
-            m_Factory = commandFactory;
+            m_Cts = new CancellationTokenSource();
+            m_CommandHandler = new CommandHandler(inClient, commandFactory, m_Cts);
+            m_CommandSender = new CommandSender(outClient, commandFactory, m_Cts);
         }
 
-        public void StartHandleCommand()
+        public void Start()
         {
             if (Interlocked.Increment(ref m_Started) == 1)
             {
-                m_HandleThread = new Thread(HandleCommands);
-                m_HandleThread.Start();
+                m_CommandHandler.StartHandleCommand();
+                m_CommandSender.StartHandleCommands();
             }
         }
 
-        public void StopHandleCommands()
+        public void Stop()
         {
             if (Interlocked.Increment(ref m_Stoped) == 1)
             {
@@ -46,77 +38,9 @@ namespace Network_Protocol
                     return;
                 }
                 m_Cts.Cancel();
-                m_Client.Close();
-                m_HandleThread.Join();
-                m_Stream.Close();
+                m_CommandSender.StopHandleCommands();
+                m_CommandHandler.StopHandleCommands();
             }
-        }
-
-        public void HandleCommands()
-        {
-            var token = m_Cts.Token;
-            while (true)
-            {
-                if (token.IsCancellationRequested)
-                {
-                    break;
-                }
-                HandleCommand();
-            }
-        }
-
-        private void HandleCommand()
-        {
-            Response response = null;
-            try
-            {
-                var jsonCommandIDRequest = (string)m_BinaryFormatter.Deserialize(m_Stream);
-                var jsonID = string.Empty;
-                var jsonRequest = string.Empty;
-
-                if (!string.IsNullOrEmpty(jsonCommandIDRequest))
-                {
-                    string[] parts = jsonCommandIDRequest.Split(';');
-                    jsonID = parts[0];
-                    jsonRequest = parts[1];
-                }
-
-                if (!string.IsNullOrEmpty(jsonID) && !string.IsNullOrEmpty(jsonRequest))
-                {
-                    var id = m_JavaScriptSerializer.Deserialize<int>(jsonID);
-                    var command = m_Factory.GetCommandByID(id);
-                    var request = m_JavaScriptSerializer.Deserialize(jsonRequest, command.RequestType);
-                    command.Request = (Request)request;
-                    response = ProcessCommand(command);
-                    response.CommandResult = Result.Done;
-                }
-            }
-            catch (Exception e)
-            {
-                response = new Response
-                    {
-                        CommandResult = Result.Failed,
-                        Message = e.Message
-                    };
-            }
-
-            string json = m_JavaScriptSerializer.Serialize(response);
-            try
-            {
-                m_BinaryFormatter.Serialize(m_Stream, json);
-            }
-            catch (IOException e)
-            {
-            }
-        }
-
-        public Response ProcessCommand(Command command)
-        {
-            if (m_Handler.ContainsCommandHandler(command.GetType()))
-            {
-                return m_Handler[command.GetType()].Invoke(command);
-            }
-            return null;
         }
     }
 }

@@ -12,26 +12,29 @@ namespace Network_Protocol
     {
         private readonly Stream m_Stream;
         private readonly Queue<Command> m_CommandsQueue;
-        private readonly TestCommandFactory m_CommandFactory;
+        private readonly CommandFactory m_CommandFactory;
         private TcpClient m_Client;
         private Thread m_HandleThread;
         private readonly BinaryFormatter m_BinaryFormatter = new BinaryFormatter();
         private  readonly JavaScriptSerializer m_JavaScriptSerializer = new JavaScriptSerializer();
-        private readonly CancellationTokenSource m_Cts = new CancellationTokenSource();
+        private readonly CancellationTokenSource m_Cts;
         private int m_Started = 0;
         private int m_Stopped = 0;
 
         public CommandSender()
         {
-            m_CommandFactory = new TestCommandFactory();
             m_CommandsQueue = new Queue<Command>();
             m_CommandsQueue.Enqueue(new SomeCommand(respone => Console.WriteLine("SomeCommand done")));
+            m_CommandsQueue.Enqueue(new HelloWorldCommand(response => Console.WriteLine("HelloWorldCommandDone")));
+            m_CommandsQueue.Enqueue(new SomeCommand((response)=>Console.WriteLine("Another SomeCommand Done")));
         }
 
-        public CommandSender(TcpClient client)
+        public CommandSender(TcpClient client, CommandFactory commandFactory,CancellationTokenSource cts)
             : this()
         {
+            m_Cts = cts;
             m_Client = client;
+            m_CommandFactory = commandFactory;
             m_Stream = client.GetStream();
         }
 
@@ -71,7 +74,7 @@ namespace Network_Protocol
                         command.SetCommandCompleted(new Response() { CommandResult = Result.Cancelled });
                     }
                 }
-                var closeCommand = new CloseCommand(response => m_Stream.Close());
+                var closeCommand = new CloseCommand(response => m_Stream.Close());                
                 ExecuteCommand(closeCommand);
                 closeCommand.WaitHandle.WaitOne();
                 m_Client.Close();

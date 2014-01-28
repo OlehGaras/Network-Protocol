@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -9,18 +10,14 @@ namespace Network_Protocol
     public class Server
     {
         public int Port { get; private set; }
-        private StreamReader m_Reader;
-        private StreamWriter m_Writer;
-        private bool m_Connected;
-        private TcpClient m_Client;
-
+        private Dictionary<string, TcpClient> m_Guids = new Dictionary<string, TcpClient>();
 
         public Server(int port)
         {
             Port = port;
         }
 
-        public TcpClient WaitAndAcceptClient(CancellationToken token)
+        public void WaitAndAcceptClient(CancellationToken token, CommandFactory commandFactory)
         {
             var tcpListener = new TcpListener(IPAddress.Any, Port);
             while (!token.IsCancellationRequested)
@@ -31,47 +28,62 @@ namespace Network_Protocol
                 }
                 else
                 {
-                    tcpListener.BeginAcceptTcpClient(ClientConnected, tcpListener);
-                    if (m_Connected)
-                        break;
+                    var client = tcpListener.AcceptTcpClient();
+                    HandleIncomingClient(client, commandFactory);
                 }
             }
             tcpListener.Stop();
-            return m_Client;
         }
 
-        private void ClientConnected(IAsyncResult ar)
+        public void HandleIncomingClient(TcpClient client, CommandFactory commandFactory)
         {
-            var tcpListener = (TcpListener)ar.AsyncState;
-            var client = tcpListener.EndAcceptTcpClient(ar);
             var stream = client.GetStream();
-            if (HandShake(stream))
-            {
-                m_Client = client;
-                m_Connected = true;
-                return;
-            }
-            client.Close();
-            stream.Dispose();
-            
-        }
+            var reader = new StreamReader(stream);
+            var writer = new StreamWriter(stream)
+                {
+                    AutoFlush = true
+                };
 
-        public bool HandShake(Stream stream)
-        {
-            m_Reader = new StreamReader(stream);
-            m_Writer = new StreamWriter(stream)
-            {
-                AutoFlush = true
-            };
-
-            var line = m_Reader.ReadLine();
+            var line = reader.ReadLine();
 
             if (line != null && String.CompareOrdinal(line, Constants.LineForHandshake) == 0)
             {
-                m_Writer.WriteLine(Constants.ServerAnswer);
-                return true;
+                writer.WriteLine(Constants.ServerAnswer);
             }
-            return false;
+            else
+            {
+                client.Close();
+                return;
+            }
+            var guid = reader.ReadLine();
+            if (m_Guids.ContainsKey(guid))
+            {
+                OnEndpointConnected(new EndPoint(client, m_Guids[guid], commandFactory));
+                m_Guids.Remove(guid);
+            }
+            else
+            {
+                m_Guids.Add(guid, client);
+            }
+        }
+
+        public event EventHandler<EndpointEventArgs> EndpointConnected;
+        protected virtual void OnEndpointConnected(EndPoint endPoint)
+        {
+            EventHandler<EndpointEventArgs> handler = EndpointConnected;
+            if (handler != null) 
+                handler(this, new EndpointEventArgs(endPoint));
+        }
+    }
+
+    public class EndpointEventArgs : EventArgs
+    {
+        public EndPoint EndPoint { get; private set; }
+        public EndpointEventArgs(EndPoint endPoint)
+        {
+            if (endPoint == null) 
+                throw new ArgumentNullException("endPoint");
+            EndPoint = endPoint;
         }
     }
 }

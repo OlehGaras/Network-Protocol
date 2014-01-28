@@ -69,8 +69,12 @@ namespace Network_Protocol
             Response = response;
             if (CallBackMethod != null)
                 CallBackMethod(response);
-            if (m_WaitHandle != null) 
-                m_WaitHandle.Set();
+            if (m_WaitHandle == null)
+            {
+                m_WaitHandle = new ManualResetEvent(false);
+                
+            }
+            m_WaitHandle.Set();
         }
     }
 

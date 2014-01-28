@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 
@@ -6,6 +7,20 @@ namespace Network_Protocol
 {
     public class Client
     {
+        private Guid m_Guid;
+
+        public Client()
+        {
+            m_Guid = Guid.NewGuid();
+        }
+
+        public EndPoint CreateEndpoint(IPAddress ipAddress, int port, CommandFactory commandFactory)
+        {
+            var firstClient = ConnectToServer(ipAddress, port);
+            var secondClient = ConnectToServer(ipAddress, port);
+            return new EndPoint(firstClient, secondClient, commandFactory);
+        }
+
         public TcpClient ConnectToServer(IPAddress ip, int port)
         {
             var client = new TcpClient();
@@ -16,13 +31,17 @@ namespace Network_Protocol
                 AutoFlush = true
             };
             var streamReader = new StreamReader(stream);
-
+            
             streamWriter.WriteLine(Constants.LineForHandshake);
             var answer = streamReader.ReadLine();
-
             if (answer != null && answer.Contains(Constants.ServerAnswer))
             {
-                return client;
+                streamWriter.WriteLine(m_Guid.ToString());
+                answer = streamReader.ReadLine();
+                if (answer != null && answer.Contains(Constants.ServerAnswer))
+                {
+                    return client;
+                }
             }
             return null;
         }
