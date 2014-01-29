@@ -24,14 +24,24 @@ namespace Network_Protocol
         public TcpClient ConnectToServer(IPAddress ip, int port)
         {
             var client = new TcpClient();
-            client.Connect(ip, port);
+            while (!client.Connected)
+            {
+                try
+                {
+                    client.Connect(ip, port);
+                }
+                catch (Exception)
+                {
+                }
+
+            }
             var stream = client.GetStream();
             var streamWriter = new StreamWriter(stream)
             {
                 AutoFlush = true
             };
             var streamReader = new StreamReader(stream);
-            
+
             streamWriter.WriteLine(Constants.LineForHandshake);
             var answer = streamReader.ReadLine();
             if (answer != null && answer.Contains(Constants.ServerAnswer))

@@ -30,6 +30,11 @@ namespace Network_Protocol
 
             set
             {
+                if (value.GetType() != RequestType)
+                {
+                    throw new Exception("Bad request Type");
+                }
+
                 m_Request = value;
             }
         }
@@ -47,6 +52,11 @@ namespace Network_Protocol
             }
             set
             {
+                if (value.GetType() != ResponseType)
+                {
+                    throw new Exception("Bad response Type");
+                }
+
                 m_Response = value;
             }
         }
@@ -72,31 +82,21 @@ namespace Network_Protocol
             if (m_WaitHandle == null)
             {
                 m_WaitHandle = new ManualResetEvent(false);
-                
             }
             m_WaitHandle.Set();
         }
     }
 
-    public class CloseCommand : Command
-    {
-        public CloseCommand(CallBack callBack):base(callBack)
-        {}
-
-        public override Type RequestType
-        {
-            get { return typeof(CloseRequest); }
-        }
-    }
-
     public class SomeCommand : Command
     {
-        public SomeCommand():this(null)
+        public SomeCommand()
+            : this(null)
         {
         }
 
-        public SomeCommand(CallBack callBack = null): base(callBack)
-        {}
+        public SomeCommand(CallBack callBack = null)
+            : base(callBack)
+        { }
 
         public override Type RequestType
         {
@@ -110,16 +110,14 @@ namespace Network_Protocol
     public class HelloWorldCommand : Command
     {
 
-        public HelloWorldCommand():this(null)
+        public HelloWorldCommand()
+            : this(null)
         {
         }
 
-        public HelloWorldCommand(CallBack callback = null) : base(callback)
+        public HelloWorldCommand(CallBack callback = null)
+            : base(callback)
         {
         }
-    }
-
-    public class AddCommand : Command
-    {
     }
 }

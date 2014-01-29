@@ -10,7 +10,7 @@ namespace Network_Protocol
     public class Server
     {
         public int Port { get; private set; }
-        private Dictionary<string, TcpClient> m_Guids = new Dictionary<string, TcpClient>();
+        private readonly Dictionary<string, TcpClient> m_Guids = new Dictionary<string, TcpClient>();
 
         public Server(int port)
         {
@@ -56,6 +56,10 @@ namespace Network_Protocol
                 return;
             }
             var guid = reader.ReadLine();
+            if (guid == null)
+                return;
+
+            writer.WriteLine(Constants.ServerAnswer);
             if (m_Guids.ContainsKey(guid))
             {
                 OnEndpointConnected(new EndPoint(client, m_Guids[guid], commandFactory));
@@ -71,19 +75,8 @@ namespace Network_Protocol
         protected virtual void OnEndpointConnected(EndPoint endPoint)
         {
             EventHandler<EndpointEventArgs> handler = EndpointConnected;
-            if (handler != null) 
+            if (handler != null)
                 handler(this, new EndpointEventArgs(endPoint));
-        }
-    }
-
-    public class EndpointEventArgs : EventArgs
-    {
-        public EndPoint EndPoint { get; private set; }
-        public EndpointEventArgs(EndPoint endPoint)
-        {
-            if (endPoint == null) 
-                throw new ArgumentNullException("endPoint");
-            EndPoint = endPoint;
         }
     }
 }

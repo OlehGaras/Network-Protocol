@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Network_Protocol
 {
     public delegate Response Handler(Command command);
-    public class CommandHandlers
+    internal class CommandHandlers
     {
         public Dictionary<Type, Handler> Handlers { get; set; }
 
@@ -12,47 +12,36 @@ namespace Network_Protocol
         {
             Handlers = new Dictionary<Type, Handler>
                 {
-                    {typeof (CloseCommand), CloseCommandHandler},
                     {typeof (SomeCommand), SomeCommandHandler},
-                    {typeof(HelloWorldCommand), HelloWorldCommandHandler}
+                    {typeof (HelloWorldCommand), HelloWorldCommandHandler}
                 };
         }
 
-        public void AddHandler(Command command, Handler handler)
+        public void AddHandler(Type command, Handler handler)
         {
-            Handlers.Add(command.GetType(), handler);
+            Handlers.Add(command, handler);
         }
-        
+
 
         public bool ContainsCommandHandler(Type typeOfCommand)
         {
             return Handlers.ContainsKey(typeOfCommand);
         }
 
-        public Handler this [Type typeOfCommand]
+        public Handler this[Type typeOfCommand]
         {
             get { return Handlers[typeOfCommand]; }
         }
 
-        public Response CloseCommandHandler(Command command)
-        {
-            return null;
-        }
-
-        public Response HelloWorldCommandHandler(Command command)
+        private Response HelloWorldCommandHandler(Command command)
         {
             Console.WriteLine("Hello World Command Handled");
             return new Response();
         }
 
-        public Response OpenCommandHandler()
-        {           
-            return null;
-        }
-
-        public Response SomeCommandHandler(Command command)
+        private Response SomeCommandHandler(Command command)
         {
-            var r = new SomeResponse {Content = "Server processed the SomeCommand"};
+            var r = new SomeResponse { Content = "Server processed the SomeCommand" };
             return r;
         }
     }

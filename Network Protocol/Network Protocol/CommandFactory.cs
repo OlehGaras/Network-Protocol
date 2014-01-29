@@ -45,15 +45,4 @@ namespace Network_Protocol
             throw new ArgumentException("Commmand not found in factory");
         }
     }
-
-
-    public class TestCommandFactory : CommandFactory
-    {
-        public TestCommandFactory()
-        {            
-            AddCommand(typeof(SomeCommand));
-            AddCommand(typeof(CloseCommand));
-            AddCommand(typeof(HelloWorldCommand));
-        }
-    }
 }
