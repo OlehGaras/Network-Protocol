@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace Network_Protocol
@@ -8,11 +9,15 @@ namespace Network_Protocol
         private readonly CommandSender m_CommandSender;
         private readonly CommandHandler m_CommandHandler;
         private readonly CancellationTokenSource m_Cts;
-        private int m_Started = 0;
-        private int m_Stoped = 0;
+        private int m_Started;
+        private int m_Stoped;
 
         public EndPoint(TcpClient inClient, TcpClient outClient, CommandFactory commandFactory)
         {
+            if (inClient == null) 
+                throw new ArgumentNullException("inClient");
+            if (outClient == null) 
+                throw new ArgumentNullException("outClient");
             m_Cts = new CancellationTokenSource();
             m_CommandHandler = new CommandHandler(inClient, commandFactory, m_Cts);
             m_CommandSender = new CommandSender(outClient, commandFactory, m_Cts);

@@ -2,7 +2,7 @@
 
 namespace Network_Protocol
 {
-    public class CloseCommand : Command
+    internal class CloseCommand : Command
     {
         public CloseCommand():this(null)
         {

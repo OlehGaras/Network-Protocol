@@ -31,8 +31,7 @@ namespace Network_Protocol
                     client.Connect(ip, port);
                 }
                 catch (Exception)
-                {
-                }
+                {}
 
             }
             var stream = client.GetStream();

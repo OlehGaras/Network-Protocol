@@ -23,10 +23,7 @@ namespace Network_Protocol
             while (!token.IsCancellationRequested)
             {
                 tcpListener.Start();
-                if (!tcpListener.Pending())
-                {
-                }
-                else
+                if (tcpListener.Pending())
                 {
                     var client = tcpListener.AcceptTcpClient();
                     HandleIncomingClient(client, commandFactory);
@@ -46,7 +43,7 @@ namespace Network_Protocol
 
             var line = reader.ReadLine();
 
-            if (line != null && String.CompareOrdinal(line, Constants.LineForHandshake) == 0)
+            if (line != null && String.Compare(line, Constants.LineForHandshake, StringComparison.OrdinalIgnoreCase) == 0)
             {
                 writer.WriteLine(Constants.ServerAnswer);
             }
@@ -63,6 +60,7 @@ namespace Network_Protocol
             if (m_Guids.ContainsKey(guid))
             {
                 OnEndpointConnected(new EndPoint(client, m_Guids[guid], commandFactory));
+                OnEndPointExtentionCreated(new EndPointExtention(client, m_Guids[guid], commandFactory));
                 m_Guids.Remove(guid);
             }
             else
@@ -77,6 +75,33 @@ namespace Network_Protocol
             EventHandler<EndpointEventArgs> handler = EndpointConnected;
             if (handler != null)
                 handler(this, new EndpointEventArgs(endPoint));
+        }
+
+        public event EventHandler<EndPointExtentionEventArgs> EndPointExtentionCreated;
+
+        protected virtual void OnEndPointExtentionCreated(EndPointExtention e)
+        {
+            EventHandler<EndPointExtentionEventArgs> handler = EndPointExtentionCreated;
+            if (handler != null) handler(this, new EndPointExtentionEventArgs(e));
+        }
+    }
+    public class EndPointExtentionEventArgs : EventArgs
+    {
+        private readonly EndPointExtention m_EndPoint;
+
+        public EndPointExtentionEventArgs(EndPointExtention endPoint)
+        {
+            m_EndPoint = endPoint;
+        }
+
+        public EndPointExtention EndPoint
+        {
+            get
+            {
+                if (m_EndPoint != null)
+                    return m_EndPoint;
+                throw new ArgumentNullException();
+            }
         }
     }
 }

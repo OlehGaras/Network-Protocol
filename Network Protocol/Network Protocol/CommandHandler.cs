@@ -19,7 +19,7 @@ namespace Network_Protocol
         private int m_Started;
         private int m_Stoped;
         private readonly CancellationTokenSource m_Cts;
-        private static readonly object m_SyncObject = new object(); 
+        private readonly object m_SyncObject = new object(); 
 
         public CommandHandler(TcpClient client, CommandFactory commandFactory, CancellationTokenSource cts)
         {

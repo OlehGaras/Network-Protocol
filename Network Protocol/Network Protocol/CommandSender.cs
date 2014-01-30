@@ -25,9 +25,6 @@ namespace Network_Protocol
         public CommandSender()
         {
             m_CommandsQueue = new Queue<Command>();
-            m_CommandsQueue.Enqueue(new SomeCommand(respone => Console.WriteLine("SomeCommand done")));
-            m_CommandsQueue.Enqueue(new HelloWorldCommand(response => Console.WriteLine("HelloWorldCommandDone")));
-            m_CommandsQueue.Enqueue(new SomeCommand(response => Console.WriteLine("Another SomeCommand Done")));
         }
 
         public CommandSender(TcpClient client, CommandFactory commandFactory, CancellationTokenSource cts)

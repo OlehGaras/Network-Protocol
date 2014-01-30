@@ -1,7 +1,4 @@
-﻿using System;
-using System.Net;
-using System.Net.Sockets;
-using System.Threading;
+﻿using System.Threading;
 using Network_Protocol;
 using EndPoint = Network_Protocol.EndPoint;
 
@@ -9,7 +6,7 @@ namespace NetworkProtocolConsoleApplication
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             var server = new Server(1111);
             EndPoint endPoint = null;
