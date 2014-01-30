@@ -18,7 +18,7 @@ namespace ProxyServerConsoleApplication
             var thread = new Thread(() => server.WaitAndAcceptClient(new CancellationTokenSource().Token, new TestCommandFactory()));
             thread.Start();
 
-            while (endPoints.Count < 2)
+            while (extentions.Count < 2 && endPoints.Count < 2)
             {
             }
             thread.Abort();
@@ -26,11 +26,11 @@ namespace ProxyServerConsoleApplication
             var firstEndPoint = endPoints[0];
             var secondEndPoint = endPoints[1];
 
-            Proxy proxy = new Proxy(extentions[0],extentions[1]);
-            proxy.Execute();
-
             firstEndPoint.Start();
             secondEndPoint.Start();
+
+            var proxy = new Proxy(extentions[0], extentions[1]);
+            proxy.Execute();
 
             firstEndPoint.Stop();
             secondEndPoint.Stop();

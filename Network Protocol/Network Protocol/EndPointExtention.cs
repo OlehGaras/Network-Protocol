@@ -15,5 +15,10 @@ namespace Network_Protocol
             OutClient = outClient;
             Guid = Guid.NewGuid();
         }
+
+        public void HandShake()
+        {
+
+        }
     }
 }

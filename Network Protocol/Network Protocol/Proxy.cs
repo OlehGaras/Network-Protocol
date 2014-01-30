@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -6,14 +8,17 @@ namespace Network_Protocol
 {
     public class Proxy
     {
-        private const int ChunkSize = 4096;
+        private const int ChunkSize = 4;
         private readonly TcpClient m_FirstInClient;
         private readonly TcpClient m_FirstOutClient;
         private readonly TcpClient m_SecondInClient;
         private readonly TcpClient m_SecondOutClient;
+        private readonly Dictionary<Guid, Guid> m_SharedEndPoints = new Dictionary<Guid, Guid>();  
 
-        public Proxy(EndPointExtention first, EndPointExtention second):this(first.InClient,first.OutClient,second.InClient,second.OutClient)
+        public Proxy(EndPointExtention first, EndPointExtention second)
+            : this(first.InClient, first.OutClient, second.InClient, second.OutClient)
         {
+            m_SharedEndPoints.Add(first.Guid,second.Guid);
         }
 
         public Proxy(TcpClient firstInClient, TcpClient firstOutClient, TcpClient secondInClient,
@@ -32,45 +37,39 @@ namespace Network_Protocol
             var firstOutStream = m_FirstOutClient.GetStream();
             var secondOutStream = m_SecondOutClient.GetStream();
 
-            var sendToSecondThread = new Thread(() => FromFirstToSecond(firstInStream, secondOutStream));
+            var sendToSecondThread = new Thread(() => SendFromTo(firstInStream, firstOutStream,secondInStream,secondOutStream));
             sendToSecondThread.Start();
+            sendToSecondThread.Join();
 
-            var sendToFirstThread = new Thread(() => FromSecondToFirst(firstOutStream, secondInStream));
+            var sendToFirstThread = new Thread(() => SendFromTo(secondInStream,secondOutStream,firstInStream,firstOutStream));
             sendToFirstThread.Start();
         }
 
-        public void FromFirstToSecond(Stream firstInStream,Stream secondOutStream)
+        public void SendFromTo(Stream firstInStream, Stream firstOutStream, Stream secondInStream, Stream secondOutStream)
         {
-            var buffer = new byte[ChunkSize];
-          
+            var buffer1 = new byte[ChunkSize];
+            var buffer2 = new byte[ChunkSize];
 
-            var res1 = firstInStream.Read(buffer, 0, buffer.Length);
-            while (res1 != 0)
+            var res1 = firstInStream.Read(buffer1, 0, buffer1.Length);
+            var res2 = secondOutStream.Read(buffer2, 0, buffer2.Length);
+            firstInStream.Position -= 4;
+            secondOutStream.Position -= 4;
+            while (res1 != 0 && res2 !=0)
             {
-                secondOutStream.Write(buffer,0,buffer.Length);
-                res1 = firstInStream.Read(buffer, 0, buffer.Length);
+                secondInStream.Write(buffer1, 0, buffer1.Length);
+                firstOutStream.Write(buffer2, 0, buffer2.Length);
+
+                firstInStream.Position -= 4;
+                secondOutStream.Position -= 4;
+                res1 = firstInStream.Read(buffer1, 0, buffer1.Length);
+                res2 = firstOutStream.Read(buffer2, 0, buffer2.Length);
+
             }
 
             firstInStream.Close();
-            secondOutStream.Close();
-
-        }
-
-        public void FromSecondToFirst(Stream firstOutStream, Stream secondInStream)
-        {
-            var buffer = new byte[ChunkSize];
-
-
-            var res1 = firstOutStream.Read(buffer, 0, buffer.Length);
-            while (res1 != 0)
-            {
-                secondInStream.Write(buffer, 0, buffer.Length);
-                res1 = firstOutStream.Read(buffer, 0, buffer.Length);
-            }
-
             firstOutStream.Close();
             secondInStream.Close();
-
+            secondOutStream.Close();
         }
 
     }
