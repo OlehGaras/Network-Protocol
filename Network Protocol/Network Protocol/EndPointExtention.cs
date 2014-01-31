@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.IO;
 using System.Net.Sockets;
 
 namespace Network_Protocol
@@ -7,18 +7,26 @@ namespace Network_Protocol
     {
         public TcpClient InClient { get; private set; }
         public TcpClient OutClient { get; private set; }
-        public Guid Guid { get; private set; }
 
-        public EndPointExtention(TcpClient inClient, TcpClient outClient, CommandFactory commandFactory) : base(inClient, outClient, commandFactory)
+        public EndPointExtention(TcpClient inClient, TcpClient outClient, CommandFactory commandFactory, int keyword) : base(inClient, outClient, commandFactory)
         {
             InClient = inClient;
             OutClient = outClient;
-            Guid = Guid.NewGuid();
+            HandShake(keyword);
         }
 
-        public void HandShake()
+        public void HandShake(int keyword)
         {
-
+            var firstStreamWriter = new StreamWriter(InClient.GetStream())
+                {
+                    AutoFlush = true
+                };
+            firstStreamWriter.Write(keyword);
+            var secondStreamWriter = new StreamWriter(InClient.GetStream())
+            {
+                AutoFlush = true
+            };
+            secondStreamWriter.Write(keyword);
         }
     }
 }

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 
@@ -8,17 +6,18 @@ namespace Network_Protocol
 {
     public class Proxy
     {
-        private const int ChunkSize = 4;
+        private const int ChunkSize = 1024 * 4;
         private readonly TcpClient m_FirstInClient;
         private readonly TcpClient m_FirstOutClient;
         private readonly TcpClient m_SecondInClient;
         private readonly TcpClient m_SecondOutClient;
-        private readonly Dictionary<Guid, Guid> m_SharedEndPoints = new Dictionary<Guid, Guid>();  
+        private Thread m_SendToSecondThread;
+        private Thread m_SendToFirstThread;
+        private CancellationTokenSource  m_Cts = new CancellationTokenSource();
 
-        public Proxy(EndPointExtention first, EndPointExtention second)
+        public Proxy(EndPoint first, EndPoint second)
             : this(first.InClient, first.OutClient, second.InClient, second.OutClient)
         {
-            m_SharedEndPoints.Add(first.Guid,second.Guid);
         }
 
         public Proxy(TcpClient firstInClient, TcpClient firstOutClient, TcpClient secondInClient,
@@ -32,45 +31,64 @@ namespace Network_Protocol
 
         public void Execute()
         {
-            var firstInStream = m_FirstInClient.GetStream();
-            var secondInStream = m_SecondInClient.GetStream();
-            var firstOutStream = m_FirstOutClient.GetStream();
-            var secondOutStream = m_SecondOutClient.GetStream();
+            m_SendToSecondThread = new Thread(() => SendFromTo(m_FirstInClient, m_SecondOutClient));
+            m_SendToSecondThread.Start();
 
-            var sendToSecondThread = new Thread(() => SendFromTo(firstInStream, firstOutStream,secondInStream,secondOutStream));
-            sendToSecondThread.Start();
-            sendToSecondThread.Join();
+            m_SendToFirstThread = new Thread(() => SendFromTo(m_FirstOutClient, m_SecondInClient));
+            m_SendToFirstThread.Start();
 
-            var sendToFirstThread = new Thread(() => SendFromTo(secondInStream,secondOutStream,firstInStream,firstOutStream));
-            sendToFirstThread.Start();
+            m_SendToFirstThread.Join();
+            m_SendToSecondThread.Join();
         }
 
-        public void SendFromTo(Stream firstInStream, Stream firstOutStream, Stream secondInStream, Stream secondOutStream)
+        public void StopExecute()
         {
-            var buffer1 = new byte[ChunkSize];
-            var buffer2 = new byte[ChunkSize];
+            m_Cts.Cancel();
+        }
 
-            var res1 = firstInStream.Read(buffer1, 0, buffer1.Length);
-            var res2 = secondOutStream.Read(buffer2, 0, buffer2.Length);
-            firstInStream.Position -= 4;
-            secondOutStream.Position -= 4;
-            while (res1 != 0 && res2 !=0)
+        public void SendFromTo(TcpClient firstClient, TcpClient secondClient)
+        {
+            var token = m_Cts.Token;
+            var buffer = new byte[ChunkSize];
+
+            var firstStream = firstClient.GetStream();
+            var secondStream = secondClient.GetStream();
+
+            DateTime lastReadTime = DateTime.Now;
+
+            while (firstClient.Connected && secondClient.Connected && !token.IsCancellationRequested && (DateTime.Now - lastReadTime) < TimeSpan.FromSeconds(500))
             {
-                secondInStream.Write(buffer1, 0, buffer1.Length);
-                firstOutStream.Write(buffer2, 0, buffer2.Length);
+                while (firstClient.Client.Poll(200, SelectMode.SelectRead) && firstStream.DataAvailable)
+                {
+                    try
+                    {
+                        var bytes = firstStream.Read(buffer, 0, ChunkSize);
+                        secondStream.Write(buffer, 0, bytes);
+                        secondStream.Flush();
+                        lastReadTime = DateTime.Now;
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
 
-                firstInStream.Position -= 4;
-                secondOutStream.Position -= 4;
-                res1 = firstInStream.Read(buffer1, 0, buffer1.Length);
-                res2 = firstOutStream.Read(buffer2, 0, buffer2.Length);
-
+                while (secondClient.Client.Poll(200, SelectMode.SelectRead) && secondStream.DataAvailable)
+                {
+                    try
+                    {
+                        var bytes = secondStream.Read(buffer, 0, ChunkSize);
+                        firstStream.Write(buffer, 0, bytes);
+                        firstStream.Flush();
+                        lastReadTime = DateTime.Now;
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
             }
 
-            firstInStream.Close();
-            firstOutStream.Close();
-            secondInStream.Close();
-            secondOutStream.Close();
+            firstClient.Close();
+            secondClient.Close();
         }
-
     }
 }

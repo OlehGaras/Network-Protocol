@@ -97,11 +97,12 @@ namespace Network_Protocol
         private void Execute()
         {
             var token = m_Cts.Token;
+            DateTime lastCommandTime = DateTime.Now;
             while (true)
             {
                 if (token.IsCancellationRequested)
                     break;
-                if (m_CommandsQueue.Count == 0)
+                if (m_CommandsQueue.Count == 0 && (DateTime.Now - lastCommandTime) < TimeSpan.FromMinutes(300))
                 {
                     SpinWait.SpinUntil(() => m_CommandsQueue.Count != 0, 200);
                     continue;
@@ -109,9 +110,10 @@ namespace Network_Protocol
                 Command command;
                 lock (m_SyncObject)
                 {
-                    command = m_CommandsQueue.Dequeue();
+                    command = m_CommandsQueue.Count == 0 ? new PingCommand() : m_CommandsQueue.Dequeue();
                 }
                 ExecuteCommand(command);
+                lastCommandTime = DateTime.Now;
             }
             if (Interlocked.Increment(ref m_Stopped) == 1)
             {

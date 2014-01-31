@@ -8,9 +8,11 @@ namespace Network_Protocol
     {
         private readonly CommandSender m_CommandSender;
         private readonly CommandHandler m_CommandHandler;
-        private readonly CancellationTokenSource m_Cts;
         private int m_Started;
         private int m_Stoped;
+        public TcpClient InClient { get; private set; }
+        public TcpClient OutClient { get; private set;}
+
 
         public EndPoint(TcpClient inClient, TcpClient outClient, CommandFactory commandFactory)
         {
@@ -18,9 +20,10 @@ namespace Network_Protocol
                 throw new ArgumentNullException("inClient");
             if (outClient == null) 
                 throw new ArgumentNullException("outClient");
-            m_Cts = new CancellationTokenSource();
-            m_CommandHandler = new CommandHandler(inClient, commandFactory, m_Cts);
-            m_CommandSender = new CommandSender(outClient, commandFactory, m_Cts);
+            InClient = inClient;
+            OutClient = outClient;
+            m_CommandHandler = new CommandHandler(inClient, commandFactory, new CancellationTokenSource());
+            m_CommandSender = new CommandSender(outClient, commandFactory, new CancellationTokenSource());
             m_CommandHandler.CloseCommandHandled += (sender, args) => Stop();
             m_CommandSender.ConnectionLost += (sender, args) => Stop();
         }

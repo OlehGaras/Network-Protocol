@@ -14,6 +14,7 @@ namespace Network_Protocol
             m_CommandsToIDDictionary = new Dictionary<int,Type>();
             m_IDToCommandsDictionary = new Dictionary<Type, int>(); 
             AddCommand(typeof(CloseCommand));
+            AddCommand(typeof(PingCommand));
         }
 
         protected void AddCommand(Type commandType)

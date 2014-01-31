@@ -151,7 +151,7 @@ namespace Network_Protocol
                 }
                 return response;
             }
-            return null;
+            return command.Response;
         }
 
         public event EventHandler<EventArgs> CloseCommandHandled;

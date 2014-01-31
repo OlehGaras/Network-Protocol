@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using Network_Protocol;
 
 namespace ConsoleApplication1
@@ -7,12 +8,22 @@ namespace ConsoleApplication1
     {
         static void Main(string[] args)
         {
-            var endPoint = new Client().CreateEndpoint(IPAddress.Parse("127.0.0.1"), 1111, new TestCommandFactory());
-            var endPoint2 = new Client().CreateEndpoint(IPAddress.Parse("127.0.0.1"), 1111, new TestCommandFactory());
+            var keyword = "keyword";
+            var endPoint = new ProxyClient().CreateEndpoint(IPAddress.Parse("127.0.0.1"), 1111, new TestCommandFactory(),keyword);
+            var helloWorldCommand = new HelloWorldCommand();
+            endPoint.AddCommand(helloWorldCommand);
             endPoint.Start();
-            endPoint2.Start();
+            endPoint.AddHandler(helloWorldCommand, Handler);
+            helloWorldCommand.WaitHandle.WaitOne();
+
+//            Thread.Sleep(TimeSpan.FromMinutes(1));
             endPoint.Stop();
-            endPoint2.Stop();
+        }
+
+        private static Response Handler(Command command)
+        {
+            Console.WriteLine("Hello World");
+            return new Response();
         }
     }
 }

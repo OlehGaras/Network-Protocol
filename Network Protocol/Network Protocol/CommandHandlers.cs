@@ -13,7 +13,7 @@ namespace Network_Protocol
             Handlers = new Dictionary<Type, Handler>
                 {
                     {typeof (SomeCommand), SomeCommandHandler},
-                    {typeof (HelloWorldCommand), HelloWorldCommandHandler}
+                    {typeof(PingCommand), PingCommandHandler}
                 };
         }
 
@@ -33,9 +33,9 @@ namespace Network_Protocol
             get { return Handlers[typeOfCommand]; }
         }
 
-        private Response HelloWorldCommandHandler(Command command)
+        private static Response PingCommandHandler(Command command)
         {
-            Console.WriteLine("Hello World Command Handled");
+            Console.WriteLine("ping");
             return new Response();
         }
 

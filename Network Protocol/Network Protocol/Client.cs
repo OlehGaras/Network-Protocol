@@ -8,20 +8,22 @@ namespace Network_Protocol
     public class Client
     {
         private Guid m_Guid;
+        protected StreamWriter Writer;
+        protected StreamReader Reader;
 
         public Client()
         {
             m_Guid = Guid.NewGuid();
         }
 
-        public EndPoint CreateEndpoint(IPAddress ipAddress, int port, CommandFactory commandFactory)
+        public EndPoint CreateEndpoint(IPAddress ipAddress, int port, CommandFactory commandFactory, string guid)
         {
-            var firstClient = ConnectToServer(ipAddress, port);
-            var secondClient = ConnectToServer(ipAddress, port);
+            var firstClient = ConnectToServer(ipAddress, port, guid);
+            var secondClient = ConnectToServer(ipAddress, port, guid);
             return new EndPoint(firstClient, secondClient, commandFactory);
         }
 
-        public TcpClient ConnectToServer(IPAddress ip, int port)
+        public virtual TcpClient ConnectToServer(IPAddress ip, int port, string keyword)
         {
             var client = new TcpClient();
             while (!client.Connected)
@@ -31,28 +33,43 @@ namespace Network_Protocol
                     client.Connect(ip, port);
                 }
                 catch (Exception)
-                {}
+                { }
 
             }
             var stream = client.GetStream();
-            var streamWriter = new StreamWriter(stream)
+            Writer = new StreamWriter(stream)
             {
                 AutoFlush = true
             };
-            var streamReader = new StreamReader(stream);
+            Reader = new StreamReader(stream);
 
-            streamWriter.WriteLine(Constants.LineForHandshake);
-            var answer = streamReader.ReadLine();
+            Writer.WriteLine(Constants.LineForHandshake);
+            var answer = Reader.ReadLine();
             if (answer != null && answer.Contains(Constants.ServerAnswer))
             {
-                streamWriter.WriteLine(m_Guid.ToString());
-                answer = streamReader.ReadLine();
-                if (answer != null && answer.Contains(Constants.ServerAnswer))
-                {
-                    return client;
-                }
+                Writer.WriteLine(m_Guid.ToString());
+                answer = Reader.ReadLine();
+                if (answer == null || !answer.Contains(Constants.ServerAnswer))
+                    return null;
+                return client;
             }
             return null;
+        }
+    }
+
+    public class ProxyClient : Client
+    {
+        public override TcpClient ConnectToServer(IPAddress ip, int port, string keyword)
+        {
+            var client  = base.ConnectToServer(ip, port, keyword);
+            if (client != null)
+            {
+                Writer.WriteLine(keyword);
+                var answer = Reader.ReadLine();
+                if (answer == null || !answer.Contains(Constants.ServerAnswer))
+                    return null;               
+            }
+            return client;
         }
     }
 }

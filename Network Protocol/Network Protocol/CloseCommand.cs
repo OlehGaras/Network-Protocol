@@ -4,10 +4,12 @@ namespace Network_Protocol
 {
     internal class CloseCommand : Command
     {
-        public CloseCommand():this(null)
+        public CloseCommand()
+            : this(null)
         {
         }
-        public CloseCommand(CallBack callBack) : base(callBack)
+        public CloseCommand(CallBack callBack)
+            : base(callBack)
         {
         }
 
@@ -17,7 +19,19 @@ namespace Network_Protocol
         }
         public override Type ResponseType
         {
-            get { return typeof (CloseResponse); }
+            get { return typeof(CloseResponse); }
+        }
+    }
+
+    internal class PingCommand : Command
+    {
+        public PingCommand()
+            : this(null)
+        {
+        }
+        public PingCommand(CallBack callBack)
+            : base(callBack)
+        {
         }
     }
 }
