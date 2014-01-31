@@ -9,15 +9,15 @@ namespace Network_Protocol
 {
     internal class CommandHandler
     {
-        private readonly CommandFactory m_Factory;
         private Thread m_HandleThread;
+        private int m_Started;
+        private int m_Stoped;
+        private readonly CommandFactory m_Factory;
         private readonly CommandHandlers m_Handlers = new CommandHandlers();
         private readonly Stream m_Stream;
         private readonly TcpClient m_Client;
         private readonly BinaryFormatter m_BinaryFormatter = new BinaryFormatter();
-        private readonly JavaScriptSerializer m_JavaScriptSerializer = new JavaScriptSerializer();
-        private int m_Started;
-        private int m_Stoped;
+        private readonly JavaScriptSerializer m_JavaScriptSerializer = new JavaScriptSerializer();        
         private readonly CancellationTokenSource m_Cts;
         private readonly object m_SyncObject = new object(); 
 
@@ -101,7 +101,7 @@ namespace Network_Protocol
 
                 if (!string.IsNullOrEmpty(jsonCommandIDRequest))
                 {
-                    string[] parts = jsonCommandIDRequest.Split(';');
+                    string[] parts = jsonCommandIDRequest.Split(new []{Constants.Separator}, StringSplitOptions.None);
                     jsonID = parts[0];
                     jsonRequest = parts[1];
                 }
@@ -157,7 +157,7 @@ namespace Network_Protocol
         public event EventHandler<EventArgs> CloseCommandHandled;
         protected virtual void OnCloseConnection()
         {
-            EventHandler<EventArgs> handler = CloseCommandHandled;
+            var handler = CloseCommandHandled;
             if (handler != null) 
                 handler(this, EventArgs.Empty);
         }

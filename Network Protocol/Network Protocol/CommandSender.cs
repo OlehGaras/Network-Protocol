@@ -105,9 +105,9 @@ namespace Network_Protocol
             {
                 if (token.IsCancellationRequested)
                     break;
-                if (m_CommandsQueue.Count == 0 && (DateTime.Now - lastCommandTime) < TimeSpan.FromMinutes(300))
+                if (m_CommandsQueue.Count == 0 && (DateTime.Now - lastCommandTime) < TimeSpan.FromMilliseconds(Constants.PingTimeout))
                 {
-                    SpinWait.SpinUntil(() => m_CommandsQueue.Count != 0, 200);
+                    SpinWait.SpinUntil(() => m_CommandsQueue.Count != 0, Constants.Timeout);
                     continue;
                 }
                 Command command;
@@ -135,7 +135,7 @@ namespace Network_Protocol
                 var jsonRequest = m_JavaScriptSerializer.Serialize(command.Request);
                 var jsonId = m_JavaScriptSerializer.Serialize(commandID);
 
-                var jsonToSend = jsonId + ";" + jsonRequest;
+                var jsonToSend = jsonId + Constants.Separator + jsonRequest;
                 m_BinaryFormatter.Serialize(m_Stream, jsonToSend);
 
                 var responseString = (string)m_BinaryFormatter.Deserialize(m_Stream);

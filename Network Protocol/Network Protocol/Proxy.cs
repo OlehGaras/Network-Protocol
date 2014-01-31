@@ -5,15 +5,14 @@ using System.Threading;
 namespace Network_Protocol
 {
     public class Proxy
-    {
-        private const int ChunkSize = 1024 * 4;
+    {       
         private readonly TcpClient m_FirstInClient;
         private readonly TcpClient m_FirstOutClient;
         private readonly TcpClient m_SecondInClient;
         private readonly TcpClient m_SecondOutClient;
         private Thread m_SendToSecondThread;
         private Thread m_SendToFirstThread;
-        private CancellationTokenSource  m_Cts = new CancellationTokenSource();
+        private readonly CancellationTokenSource  m_Cts = new CancellationTokenSource();
 
         public Proxy(EndPoint first, EndPoint second)
             : this(first.InClient, first.OutClient, second.InClient, second.OutClient)
@@ -48,47 +47,40 @@ namespace Network_Protocol
 
         public void SendFromTo(TcpClient firstClient, TcpClient secondClient)
         {
-            var token = m_Cts.Token;
-            var buffer = new byte[ChunkSize];
-
-            var firstStream = firstClient.GetStream();
-            var secondStream = secondClient.GetStream();
-
             DateTime lastReadTime = DateTime.Now;
+            var token = m_Cts.Token;
+            
+            var firstStream = firstClient.GetStream();
+            var secondStream = secondClient.GetStream();           
 
-            while (firstClient.Connected && secondClient.Connected && !token.IsCancellationRequested && (DateTime.Now - lastReadTime) < TimeSpan.FromSeconds(500))
+            while (firstClient.Connected && secondClient.Connected && !token.IsCancellationRequested && (DateTime.Now - lastReadTime) < TimeSpan.FromSeconds(Constants.ServerTimeToWait))
             {
-                while (firstClient.Client.Poll(200, SelectMode.SelectRead) && firstStream.DataAvailable)
+                try
                 {
-                    try
-                    {
-                        var bytes = firstStream.Read(buffer, 0, ChunkSize);
-                        secondStream.Write(buffer, 0, bytes);
-                        secondStream.Flush();
-                        lastReadTime = DateTime.Now;
-                    }
-                    catch (Exception)
-                    {
-                    }
+                    lastReadTime = Send(firstClient, firstStream, secondStream,  lastReadTime);
+                    lastReadTime = Send(secondClient,secondStream,firstStream, lastReadTime);
                 }
-
-                while (secondClient.Client.Poll(200, SelectMode.SelectRead) && secondStream.DataAvailable)
+                catch (Exception)
                 {
-                    try
-                    {
-                        var bytes = secondStream.Read(buffer, 0, ChunkSize);
-                        firstStream.Write(buffer, 0, bytes);
-                        firstStream.Flush();
-                        lastReadTime = DateTime.Now;
-                    }
-                    catch (Exception)
-                    {
-                    }
+                    break;
                 }
             }
 
             firstClient.Close();
             secondClient.Close();
+        }
+
+        public DateTime Send(TcpClient client, NetworkStream firstStream , NetworkStream secondStream, DateTime lastReadTime)
+        {
+            var buffer = new byte[Constants.ChunkSize];
+            while (client.Client.Poll(Constants.Timeout, SelectMode.SelectRead) && firstStream.DataAvailable)
+            {
+                    var bytes = firstStream.Read(buffer, 0, Constants.ChunkSize);
+                    secondStream.Write(buffer, 0, bytes);
+                    secondStream.Flush();
+                    lastReadTime = DateTime.Now;
+            }
+            return lastReadTime;
         }
     }
 }

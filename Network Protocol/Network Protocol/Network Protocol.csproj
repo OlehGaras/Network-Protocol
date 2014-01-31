@@ -53,7 +53,6 @@
     <Compile Include="CommandHandler.cs" />
     <Compile Include="EndPoint.cs" />
     <Compile Include="EndpointEventArgs.cs" />
-    <Compile Include="EndPointExtention.cs" />
     <Compile Include="Proxy.cs" />
     <Compile Include="Request.cs" />
     <Compile Include="CommandHandlers.cs" />

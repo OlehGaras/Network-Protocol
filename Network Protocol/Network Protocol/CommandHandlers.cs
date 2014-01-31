@@ -35,7 +35,6 @@ namespace Network_Protocol
 
         private static Response PingCommandHandler(Command command)
         {
-            Console.WriteLine("ping");
             return new Response();
         }
 

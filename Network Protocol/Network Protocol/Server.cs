@@ -10,7 +10,7 @@ namespace Network_Protocol
     public class Server
     {
         public int Port { get; private set; }
-        protected readonly Dictionary<string, TcpClient> m_Guids = new Dictionary<string, TcpClient>();
+        private readonly Dictionary<string, TcpClient> m_Guids = new Dictionary<string, TcpClient>();
         protected StreamReader Reader;
         protected StreamWriter Writer;
 
@@ -78,32 +78,7 @@ namespace Network_Protocol
                 handler(this, new EndpointEventArgs(endPoint));
         }
 
-        public event EventHandler<EndPointExtentionEventArgs> EndPointExtentionCreated;
-
-        protected virtual void OnEndPointExtentionCreated(EndPointExtention e)
-        {
-            EventHandler<EndPointExtentionEventArgs> handler = EndPointExtentionCreated;
-            if (handler != null) handler(this, new EndPointExtentionEventArgs(e));
-        }
-    }
-    public class EndPointExtentionEventArgs : EventArgs
-    {
-        private readonly EndPointExtention m_EndPoint;
-
-        public EndPointExtentionEventArgs(EndPointExtention endPoint)
-        {
-            m_EndPoint = endPoint;
-        }
-
-        public EndPointExtention EndPoint
-        {
-            get
-            {
-                if (m_EndPoint != null)
-                    return m_EndPoint;
-                throw new ArgumentNullException();
-            }
-        }
+        
     }
 
     public class ProxyServer : Server
