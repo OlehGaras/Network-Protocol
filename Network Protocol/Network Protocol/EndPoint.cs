@@ -24,7 +24,7 @@ namespace Network_Protocol
             OutClient = outClient;
             m_CommandHandler = new CommandHandler(inClient, commandFactory, new CancellationTokenSource());
             m_CommandSender = new CommandSender(outClient, commandFactory, new CancellationTokenSource());
-            m_CommandHandler.CloseCommandHandled += (sender, args) => Stop();
+            m_CommandHandler.CloseCommandHandled += (sender, args) => Stop(false);
             m_CommandSender.ConnectionLost += (sender, args) => Stop();
         }
 
@@ -37,7 +37,7 @@ namespace Network_Protocol
             }
         }
 
-        public void Stop()
+        public void Stop(bool executeCloseCommand = true)
         {
             if (Interlocked.Increment(ref m_Stoped) == 1)
             {
@@ -46,7 +46,7 @@ namespace Network_Protocol
                     Interlocked.Decrement(ref m_Stoped);
                     return;
                 }
-                m_CommandSender.StopHandleCommands();
+                m_CommandSender.StopHandleCommands(executeCloseCommand);
                 m_CommandHandler.StopHandleCommands();
             }
         }

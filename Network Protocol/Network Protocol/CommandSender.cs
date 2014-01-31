@@ -57,7 +57,7 @@ namespace Network_Protocol
             }
         }
 
-        public void StopHandleCommands()
+        public void StopHandleCommands(bool executeCloseCommand = true)
         {
             if (Interlocked.Increment(ref m_Stopped) == 1)
             {
@@ -71,9 +71,12 @@ namespace Network_Protocol
 
                 CheckTheQueue();
 
-                var closeCommand = new CloseCommand(response => m_Stream.Close());
-                ExecuteCommand(closeCommand);
-                closeCommand.WaitHandle.WaitOne();
+                if (executeCloseCommand)
+                {
+                    var closeCommand = new CloseCommand(response => m_Stream.Close());
+                    ExecuteCommand(closeCommand);
+                    closeCommand.WaitHandle.WaitOne();
+                }
                 m_Client.Close();
                 OnConnectionLost();
             }
